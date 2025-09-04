@@ -2,8 +2,6 @@
 import * as ex from 'excalibur';
 import { GameOfLife } from './gameOfLife';
 
-
-
 const game = new ex.Engine({
     width: 100,
     height: 100,
