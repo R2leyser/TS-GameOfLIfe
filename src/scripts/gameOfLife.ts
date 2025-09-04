@@ -5,7 +5,6 @@ import { RentalPool } from './lib/RentalPool';
 export class GameOfLife extends ex.Scene {
     private possibleCellMap: ex.Vector[] = [];
     private activeCellMap: Map<string, Cell> = new Map<string, Cell>();
-    private newActiveCellMap: Map<string, Cell> = new Map<string, Cell>();
     private directions: ex.Vector[] = [];
 
     private pool: RentalPool<Cell> = new RentalPool( () => { 
@@ -29,14 +28,6 @@ export class GameOfLife extends ex.Scene {
             this.add(cell);
     }
 
-    addNewActiveCell(vec: ex.Vector, age?: number, dead?: boolean ) {
-            let cell = this.pool.rent();
-            cell.updatePos(vec);
-            cell.updateAge(1);
-            this.newActiveCellMap.set(vec.toString(), cell);
-            this.add(cell);
-    }
-
     countNeighbours(vector: ex.Vector): number { 
         let count = 0; 
         for (let dir = 0; dir < this.directions.length; dir++) {
@@ -54,60 +45,63 @@ export class GameOfLife extends ex.Scene {
         super()
     }
 
-    override onPreDraw(ctx: ex.ExcaliburGraphicsContext, elapsed: number): void {
-        super.onPreDraw(ctx, elapsed);
+    override onPostDraw(ctx: ex.ExcaliburGraphicsContext, elapsed: number): void {
+        super.onPostDraw(ctx, elapsed);
 
-        this.activeCellMap.forEach((cell) => {
-            this.add(cell);
-        });
 
+        // Step 1: Gather all possible cells (current active and their neighbors)
         this.possibleCellMap.length = 0;
+        const visited = new Set<string>();
 
         this.activeCellMap.forEach((cell: Cell) => {
-            let vec = cell.vector;
-            for (let dir of this.directions) {
-                var neighborPos = new ex.Vector(vec.x + dir.x, vec.y + dir.y)
-                this.possibleCellMap.push(neighborPos);
-            };
-            this.possibleCellMap.push(vec);
+            const vec = cell.vector;
+            if (!visited.has(vec.toString())) {
+                this.possibleCellMap.push(vec);
+                visited.add(vec.toString());
+            }
+            for (const dir of this.directions) {
+                const neighborPos = vec.add(dir);
+                if (!visited.has(neighborPos.toString())) {
+                    this.possibleCellMap.push(neighborPos);
+                    visited.add(neighborPos.toString());
+                }
+            }
         });
 
-        this.possibleCellMap.forEach((p: ex.Vector) => {
-            let neighbors = 0;
-            let key = p.toString();
+        // Step 2: Determine the next generation
+        const nextGenerationMap = new Map<string, Cell>();
+        for (const p of this.possibleCellMap) {
+            const key = p.toString();
+            const neighbors = this.countNeighbours(p);
+            const isCurrentlyActive = this.activeCellMap.has(key);
 
-            neighbors = this.countNeighbours(p);
-            
-            if ( neighbors == 3 ) {
-                let cell = this.pool.rent();
-                cell.updatePos(p); 
-                cell.updateAge(1);
-                this.newActiveCellMap.set(key,cell);
-            } else if ( neighbors == 2  && this.activeCellMap.has(key)) {
-                let cell = this.pool.rent();
-                cell.updatePos(p); 
-                cell.updateAge(1);
-                this.newActiveCellMap.set(key,cell);
+            // Game of Life rules
+            // Rule 2: A live cell with 2 or 3 neighbors survives
+            if (isCurrentlyActive && (neighbors === 2 || neighbors === 3)) {
+                // Keep the cell alive in the next generation
+                // Note: You can reuse the existing cell object here for efficiency
+                const cell = this.activeCellMap.get(key)!;
+                nextGenerationMap.set(key, cell);
             } 
-        })
 
-        const keysToRemove: string[] = [];
-        this.activeCellMap.forEach((cell) => {
-            this.remove(cell);
-            this.pool.return(cell);
-            keysToRemove.push(cell.vector.toString());
+            // Rule 4: A dead cell with exactly 3 neighbors becomes a live cell
+            else if (!isCurrentlyActive && neighbors === 3) {
+                const cell = this.pool.rent();
+                cell.updatePos(p);
+                cell.updateAge(1);
+                nextGenerationMap.set(key, cell);
+                this.add(cell); // Add the new cell to the scene
+            }
+        }
+
+        this.activeCellMap.forEach((cell, key) => {
+            if (!nextGenerationMap.has(key)) {
+                this.remove(cell);
+                this.pool.return(cell);
+            }
         });
 
-        this.activeCellMap.clear();
-
-        this.activeCellMap = new Map(this.newActiveCellMap);
-
-        const newKeysToRemove: string[] = [];
-        this.newActiveCellMap.forEach((cell) => {
-            this.pool.return(cell);
-            newKeysToRemove.push(cell.vector.toString());
-        });
-        this.newActiveCellMap.clear();
+        this.activeCellMap = nextGenerationMap;
     }
 
     override onInitialize(engine: ex.Engine): void {
