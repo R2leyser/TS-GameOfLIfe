@@ -5,8 +5,17 @@ import { RentalPool } from './lib/RentalPool';
 export class GameOfLife extends ex.Scene {
     private possibleCellMap: ex.Vector[] = [];
     private activeCellMap: Map<string, Cell> = new Map<string, Cell>();
-    private directions: ex.Vector[] = [];
-
+    private deadCellMap: Map<string, Cell> = new Map<string, Cell>();
+    private directions: ex.Vector[] = [ 
+            new ex.Vector(-1,-1 ),
+            new ex.Vector(-1, 0 ),
+            new ex.Vector(-1, 1 ),
+            new ex.Vector( 0,-1 ),
+            new ex.Vector( 0, 1 ),
+            new ex.Vector( 1,-1 ),
+            new ex.Vector( 1, 0 ),
+            new ex.Vector( 1, 1 ),
+        ];
     private pool: RentalPool<Cell> = new RentalPool( () => { 
                                         let cell = new Cell(new ex.Vector(-100,-100), 1)
                                         return cell
@@ -18,7 +27,7 @@ export class GameOfLife extends ex.Scene {
                                         return used
                                     }, 
 
-                                    100);
+                                    512);
 
     addActiveCell(vec: ex.Vector, age?: number, dead?: boolean ) {
             let cell = this.pool.rent();
@@ -32,10 +41,8 @@ export class GameOfLife extends ex.Scene {
         let count = 0; 
         for (let dir = 0; dir < this.directions.length; dir++) {
             const neighborPos = vector.add(this.directions[dir]);
-            console.info( `Checking neighbor at ${neighborPos.x},${neighborPos.y}` );
             if (this.activeCellMap.has(neighborPos.toString())) {
                 count++;
-                console.debug( `Found neighbor at ${neighborPos.x},${neighborPos.y}` );
             }
         }
         return count
@@ -82,7 +89,7 @@ export class GameOfLife extends ex.Scene {
                 // Note: You can reuse the existing cell object here for efficiency
                 const cell = this.activeCellMap.get(key)!;
                 nextGenerationMap.set(key, cell);
-            } 
+            }
 
             // Rule 4: A dead cell with exactly 3 neighbors becomes a live cell
             else if (!isCurrentlyActive && neighbors === 3) {
@@ -95,7 +102,7 @@ export class GameOfLife extends ex.Scene {
         }
 
         this.activeCellMap.forEach((cell, key) => {
-            if (!nextGenerationMap.has(key)) {
+            if (!nextGenerationMap.has(key) || cell.vector.distance(new ex.Vector(0,0)) > 100 ) {
                 this.remove(cell);
                 this.pool.return(cell);
             }
@@ -105,34 +112,28 @@ export class GameOfLife extends ex.Scene {
     }
 
     override onInitialize(engine: ex.Engine): void {
-
-        this.directions = [ 
-            new ex.Vector(-1,-1 ),
-            new ex.Vector(-1, 0 ),
-            new ex.Vector(-1, 1 ),
-            new ex.Vector( 0,-1 ),
-            new ex.Vector( 0, 1 ),
-            new ex.Vector( 1,-1 ),
-            new ex.Vector( 1, 0 ),
-            new ex.Vector( 1, 1 ),
-        ]
-
         this.input.pointers.primary.on('down', (evt) => {
-            const x = Math.floor(evt.worldPos.x / 50);
-            const y = Math.floor(evt.worldPos.y / 50);
+            const x = Math.floor(evt.worldPos.x / 30);
+            const y = Math.floor(evt.worldPos.y / 30);
             let vec = new ex.Vector(x, y)
 
-            if (this.activeCellMap.has(vec.toString())) {
-                return
+            if (this.activeCellMap.has(vec.toString())) { } else {
+                for (let dir of this.directions) {
+                    var tempVec = new ex.Vector(vec.x + dir.x, vec.y + dir.y)
+                    this.addActiveCell(tempVec);
+                }
+                this.addActiveCell(vec);
             }
-
-            console.log(vec);
-            for (let dir of this.directions) {
-                var tempVec = new ex.Vector(vec.x + dir.x, vec.y + dir.y)
-                this.addActiveCell(tempVec);
-            }
-            this.addActiveCell(vec);
-
         });
+
+        for (let i = 0; i < 500; i++) {
+            let x = Math.ceil((Math.random() * 65) -1 );
+            let y = Math.ceil((Math.random() * 30) -1 );
+            let vec = new ex.Vector(x, y)
+
+            if (!this.activeCellMap.has(vec.toString())){
+                this.addActiveCell(vec);
+            } else i--
+        }
     }
 };
