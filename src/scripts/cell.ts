@@ -32,26 +32,8 @@ export class Cell extends ex.Actor {
 
     updatePos( vec: ex.Vector ): void {
         this.vector = vec;
-        this.pos = ex.vec(vec.x * 50 + 25, vec.y * 50 + 25);
+        this.pos = new ex.Vector(vec.x * 50 + 25, vec.y * 50 + 25);
     } 
-
-    onPreKill(scene: ex.Scene): void {
-        this.dead = true;
-        this.updateAge(this.age);
-        this.color = ex.Color.Gray;
-        scene.add(this);
-        return;
-    }
-
-    onPostUpdate(engine: ex.Engine, elapsed: number): void {
-        if (this.dead) {
-            this.color = ex.Color.Gray;
-            this.updateAge(this.age - 1);
-            if (this.age <= 0) {
-                this.kill();
-            }
-        }
-    }
 
     constructor(vector: ex.Vector, age?: number, dead?: boolean) {
         let color;
@@ -95,15 +77,4 @@ export class Cell extends ex.Actor {
         this.vector = vector;
         this.pos = ex.vec(vector.x * 50 + 25, vector.y * 50 + 25);
     }
-
-
-    override onPreUpdate( _engine: ex.Engine, _delta: number): void {
-        if (this.dead) {
-            this.age--;
-        }
-    }
-
-
-
-
 }

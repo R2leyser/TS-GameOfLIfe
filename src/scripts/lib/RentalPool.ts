@@ -30,6 +30,7 @@ export class RentalPool<T> {
     }
 
     return clean ? this.cleaner(this._pool.pop()!) : this._pool.pop()!;
+    
   }
 
   /**
