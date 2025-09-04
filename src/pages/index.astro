@@ -1,16 +1,30 @@
 ---
-
+import GameOfLife from "../components/GameOfLife.astro"
 ---
 
 <html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>My Astro Page</title>
+  </head>
+  <body>
+    <main>
+        <script src="https://unpkg.com/excalibur@0.30.0"></script>
+        <script src="../scripts/main.ts"></script>
+    </main>
+  </body>
+
+<style>
+    html,
+    body {
+        background-color: black;
+        margin: 0;
+        padding: 0;
+        height: 100%;
+    }
+    main {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+</style>
