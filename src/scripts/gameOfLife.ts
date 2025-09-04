@@ -112,12 +112,8 @@ export class GameOfLife extends ex.Scene {
 
     }
 
-
     override onInitialize(engine: ex.Engine): void {
 
-        this.garbageCollector = new ex.GarbageCollector(ex.DefaultGarbageCollectionOptions);
-
-        this.garbageCollector.start();
 
         this.directions = [ 
             new ex.Vector(-1,-1 ),
