@@ -39,7 +39,6 @@ export class RentalPool<T> {
    */
   return(object: T): void {
     console.log("returning", object);
-
     this._pool.push(object);
   }
 }
