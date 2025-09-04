@@ -1,5 +1,6 @@
 import * as ex from 'excalibur';
 import { Cell } from './cell';
+import { RentalPool } from './lib/RentalPool';
 
 export class GameOfLife extends ex.Scene {
     private possibleCellMap: ex.Vector[] = [];
@@ -7,6 +8,8 @@ export class GameOfLife extends ex.Scene {
     private newActiveCellMap: Map<string, Cell> = new Map<string, Cell>();
     private deadCellMap: Map<string, Cell> = new Map<string, Cell>();
     private directions: ex.Vector[] = [];
+
+    private pool: RentalPool<Cell>;
 
     addActiveCell(vec1: ex.Vector, age?: number, dead?: boolean ) {
         this.activeCellMap.set(vec1.toString(), new Cell(vec1, age, dead));
@@ -35,21 +38,19 @@ export class GameOfLife extends ex.Scene {
     override onPreDraw(ctx: ex.ExcaliburGraphicsContext, elapsed: number): void {
         super.onPreDraw(ctx, elapsed);
         this.deadCellMap.forEach((cell) => {
-                if (!this.actors.includes(cell) && !this.activeCellMap.has(cell.vector.toString()) ){
-                    this.add(cell);
-                } else if (this.activeCellMap.has(cell.vector.toString()) && this.actors.includes(cell)) {
-                    this.remove(cell);
+                this.add(cell);
+                if (this.activeCellMap.has(cell.vector.toString()) && this.actors.includes(cell)) {
                     this.activeCellMap.delete(cell.vector.toString());
                 }
         });
 
         this.activeCellMap.forEach((cell) => {
-                if (!this.actors.includes(cell)){
-                    this.add(cell);
-                }
+            if (!this.actors.includes(cell)){
+                this.add(cell);
+            }
         });
 
-            this.possibleCellMap.length = 0;
+        this.possibleCellMap.length = 0;
 
         this.activeCellMap.forEach((cell: Cell) => {
             this.directions.forEach((dir) => {
@@ -60,53 +61,44 @@ export class GameOfLife extends ex.Scene {
 
         this.possibleCellMap.forEach((p: ex.Vector) => {
             let neighbors = 0;
+            let key = p.toString();
 
-            let cell = new Cell(p, 1);
+            let cell = this.pool.rent();
+            cell.updatePos(p);
+            cell.updateAge(1);
             neighbors = this.countNeighbours(cell);
             
             if ( neighbors == 3 ) {
-                this.newActiveCellMap.set(p.toString(), cell);
-            } else if ( neighbors == 2  && this.activeCellMap.has(p.toString())) {
-                this.newActiveCellMap.set(p.toString(), cell);
+                this.add(cell);
+                this.newActiveCellMap.set(key, cell);
+            } else if ( neighbors == 2  && this.activeCellMap.has(key)) {
+                this.add(cell);
+                this.newActiveCellMap.set(key, cell);
             } else {
-                cell.dead = true;
-                cell.updateAge(-1);
-                cell.color = ex.Color.Gray;
-                this.deadCellMap.set(p.toString(), cell);
+                this.pool.return(cell);
             }
 
         })
 
-       this.deadCellMap.forEach((cell) => {
-           if (!this.actors.includes(cell)){
-               this.add(cell);
-           } else if (cell.dead) {
-                this.remove(cell);
-           }
-       });    
-
         this.activeCellMap.forEach((cell) => {
-            if (this.actors.includes(cell) && !this.newActiveCellMap.has(cell.vector.toString())) {
-                this.remove(cell);
-                this.activeCellMap.delete(cell.vector.toString());
-                cell.dead = true;
-                cell.updateAge(-1);
-                cell.color = ex.Color.Gray;
-                this.deadCellMap.set(cell.vector.toString(), cell);
-            }
+            this.remove(cell);
+            this.pool.return(cell);
         });
 
         this.activeCellMap = new Map(this.newActiveCellMap);
 
-        this.newActiveCellMap.forEach( (cell) => {
-            this.remove(cell)
-        });
-            
-        this.newActiveCellMap.clear();
         this.clear(true);
     }
 
     override onInitialize(engine: ex.Engine): void {
+
+        this.pool = new RentalPool( () => { return new Cell(new ex.Vector(-100,-100), 0)},
+                                   (used: Cell) => {
+                                        used.updateAge(0);
+                                        used.updatePos(new ex.Vector(-100, -100));
+                                        return used
+                                    }, 
+                                   100);
 
         this.directions = [ 
             new ex.Vector(-1,-1 ),
@@ -122,19 +114,20 @@ export class GameOfLife extends ex.Scene {
         this.input.pointers.primary.on('down', (evt) => {
             const x = Math.floor(evt.worldPos.x / 50);
             const y = Math.floor(evt.worldPos.y / 50);
+            let vec = new ex.Vector(x, y)
              this.directions.forEach((dir) => {
-                 let cell = new Cell(new ex.Vector(x, y).add(dir), 1);
-                 this.activeCellMap.set(new ex.Vector(x, y).add(dir).toString(), cell);
-                 this.add(cell);
+                let cell = this.pool.rent();
+                cell.updatePos(vec);
+                cell.updateAge(1);
+                this.activeCellMap.set(vec.add(dir).toString(), cell);
+                this.add(cell);
              });
-            let cell = new Cell(new ex.Vector(x, y), 1);
-            this.activeCellMap.set(new ex.Vector(x, y).toString(), cell);
+            let cell = this.pool.rent();
+            cell.updatePos(vec);
+            cell.updateAge(1);
+            this.activeCellMap.set(vec.toString(), cell);
             this.add(cell);
         });
-
-        this.activeCellMap.forEach((cell) => {
-            this.add(cell);
-        });    
     }
 };
 

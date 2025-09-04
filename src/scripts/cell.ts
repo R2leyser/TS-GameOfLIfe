@@ -7,7 +7,6 @@ export class Cell extends ex.Actor {
     age: number;
     dead: boolean; 
 
-
     updateAge( age: number) {
         this.age = age;
         switch (age) {
@@ -30,6 +29,11 @@ export class Cell extends ex.Actor {
                 this.color = ex.Color.Black;
         }
     }
+
+    updatePos( vec: ex.Vector ): void {
+        this.vector = vec;
+        this.pos = ex.vec(vec.x * 50 + 25, vec.y * 50 + 25);
+    } 
 
     onPreKill(scene: ex.Scene): void {
         this.dead = true;
