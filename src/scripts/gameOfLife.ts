@@ -120,11 +120,14 @@ export class GameOfLife extends ex.Scene {
                 if (!this.deadCellMap.has(key)){
                     this.deadCellMap.set(key, cell);
                     cell.actions.fade(0, 500).toPromise().finally(() => {
+                        this.deadCellMap.delete(key);
                         this.pool.return(cell);
                         this.remove(cell);
                     })
+                } else {
+                    this.pool.return(cell);
+                    this.remove(cell);
                 }
-                this.deadCellMap.delete(key);
             }
         });
 
