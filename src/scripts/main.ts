@@ -5,7 +5,7 @@ import { GameOfLife } from './gameOfLife';
 const game = new ex.Engine({
     width: 100,
     height: 100,
-    backgroundColor: ex.Color.fromHex(ex.Color.Black.toHex()),
+    backgroundColor: ex.Color.fromHex("#1E1D25"),
     pixelArt: true,
     pixelRatio: 2,
     displayMode: ex.DisplayMode.FillScreen,

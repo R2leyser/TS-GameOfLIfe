@@ -24,15 +24,18 @@ export class GameOfLife extends ex.Scene {
                                     (used: Cell) => {
                                         used.updateAge(1);
                                         used.updatePos(new ex.Vector(-100, -100));
+                                        used.actions.clearActions();
+                                        used.graphics.opacity = 1;
                                         return used
                                     }, 
 
-                                    512);
+                                    1000);
 
     addActiveCell(vec: ex.Vector, age?: number, dead?: boolean ) {
             let cell = this.pool.rent();
             cell.updatePos(vec);
             cell.updateAge(1);
+            cell.actions.clearActions();
             this.activeCellMap.set(vec.toString(), cell);
             this.add(cell);
     }
@@ -95,17 +98,26 @@ export class GameOfLife extends ex.Scene {
             else if (!isCurrentlyActive && neighbors === 3) {
                 const cell = this.pool.rent();
                 cell.updatePos(p);
-                cell.updateAge(1);
-                nextGenerationMap.set(key, cell);
-                this.add(cell); // Add the new cell to the scene
+                cell.actions.clearActions();
+                if (
+                    cell.pos.x > this.engine.screen.width ||
+                    cell.pos.y > this.engine.screen.height
+                ) {
+                    this.pool.return(cell);
+                } else {
+                    nextGenerationMap.set(key, cell);
+                    this.add(cell); // Add the new cell to the scene
+                }
             }
         }
 
         this.activeCellMap.forEach((cell, key) => {
-            if (!nextGenerationMap.has(key) || cell.vector.distance(new ex.Vector(0,0)) > 100 ) {
-                this.remove(cell);
-                this.pool.return(cell);
-            }
+            if (!nextGenerationMap.has(key)) {
+                cell.actions.fade(0, 100).toPromise().finally(() => {
+                    this.remove(cell);
+                    this.pool.return(cell);
+                })
+            }  
         });
 
         this.activeCellMap = nextGenerationMap;
@@ -113,8 +125,8 @@ export class GameOfLife extends ex.Scene {
 
     override onInitialize(engine: ex.Engine): void {
         this.input.pointers.primary.on('down', (evt) => {
-            const x = Math.floor(evt.worldPos.x / 30);
-            const y = Math.floor(evt.worldPos.y / 30);
+            const x = Math.floor(evt.worldPos.x / 40);
+            const y = Math.floor(evt.worldPos.y / 40);
             let vec = new ex.Vector(x, y)
 
             if (this.activeCellMap.has(vec.toString())) { } else {
@@ -126,14 +138,14 @@ export class GameOfLife extends ex.Scene {
             }
         });
 
-        for (let i = 0; i < 500; i++) {
-            let x = Math.ceil((Math.random() * 65) -1 );
-            let y = Math.ceil((Math.random() * 30) -1 );
+        for (let i = 0; i < 1000; i++) {
+            let x = Math.ceil((Math.random() * 100) -1 );
+            let y = Math.ceil((Math.random() * 50) -1 );
             let vec = new ex.Vector(x, y)
 
             if (!this.activeCellMap.has(vec.toString())){
                 this.addActiveCell(vec);
-            } else i--
+            }
         }
     }
 };
