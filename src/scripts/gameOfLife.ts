@@ -70,10 +70,12 @@ export class GameOfLife extends ex.Scene {
                 visited.add(vec.toString());
             }
             for (const dir of this.directions) {
-                const neighborPos = vec.add(dir);
-                if (!visited.has(neighborPos.toString())) {
-                    this.possibleCellMap.push(neighborPos);
-                    visited.add(neighborPos.toString());
+                if (!cell.isOffScreen) {
+                    const neighborPos = vec.add(dir);
+                    if (!visited.has(neighborPos.toString())) {
+                        this.possibleCellMap.push(neighborPos);
+                        visited.add(neighborPos.toString());
+                    }
                 }
             }
         });
@@ -101,7 +103,9 @@ export class GameOfLife extends ex.Scene {
                 cell.actions.clearActions();
                 if (
                     cell.pos.x > this.engine.screen.width ||
-                    cell.pos.y > this.engine.screen.height
+                    cell.pos.y > this.engine.screen.height ||
+                    cell.pos.x < 0 ||
+                    cell.pos.y < 0
                 ) {
                     this.pool.return(cell);
                 } else {
@@ -113,17 +117,22 @@ export class GameOfLife extends ex.Scene {
 
         this.activeCellMap.forEach((cell, key) => {
             if (!nextGenerationMap.has(key)) {
-                cell.actions.fade(0, 100).toPromise().finally(() => {
-                    this.remove(cell);
-                    this.pool.return(cell);
-                })
-            }  
+                if (!this.deadCellMap.has(key)){
+                    this.deadCellMap.set(key, cell);
+                    cell.actions.fade(0, 500).toPromise().finally(() => {
+                        this.pool.return(cell);
+                        this.remove(cell);
+                    })
+                }
+                this.deadCellMap.delete(key);
+            }
         });
 
         this.activeCellMap = nextGenerationMap;
     }
 
     override onInitialize(engine: ex.Engine): void {
+
         this.input.pointers.primary.on('down', (evt) => {
             const x = Math.floor(evt.worldPos.x / 40);
             const y = Math.floor(evt.worldPos.y / 40);

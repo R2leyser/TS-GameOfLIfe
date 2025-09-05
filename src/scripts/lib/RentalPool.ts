@@ -24,7 +24,7 @@ export class RentalPool<T> {
    * The pool will automatically double if depleted
    * @param clean
    */
-  rent(clean: boolean = false): T {
+  rent(clean: boolean = true): T {
     if (this._pool.length === 0) {
       this.grow(this._size);
     }
