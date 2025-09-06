@@ -24,13 +24,18 @@ export class RentalPool<T> {
    * The pool will automatically double if depleted
    * @param clean
    */
-  rent(clean: boolean = true): T {
+  rent(clean: boolean = false): T {
     if (this._pool.length === 0) {
       this.grow(this._size);
     }
 
-    return clean ? this.cleaner(this._pool.pop()!) : this._pool.pop()!;
+
+    let rentedCell
+    while (!rentedCell){
+        rentedCell = clean ? this.cleaner(this._pool.pop()!) : this._pool.pop()!;
+    }
     
+    return rentedCell;
   }
 
   /**
@@ -38,6 +43,9 @@ export class RentalPool<T> {
    * @param object
    */
   return(object: T): void {
+    if (object == undefined) {
+        console.error("pushed undefined object");
+    }
     this._pool.push(object);
   }
 }
