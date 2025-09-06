@@ -69,6 +69,12 @@ export class GameOfLife extends ex.Scene {
 
 
     private restartSimulation() {
+
+        this.activeCellMap.forEach(cell => {
+            this.pool.return(cell);
+        });
+
+
         this.clear(false);
         this.possibleCellMap = [];
         this.activeCellMap = new Map<string, Cell>();
@@ -122,18 +128,19 @@ export class GameOfLife extends ex.Scene {
 
         this.changedCells.forEach((vec: ex.Vector) => {
             const key = GameOfLife.generateKey(vec);
+
+            const worldP = this.gridToWorld(vec);
+            const isOutOfBounds = worldP.x > this.engine.canvasWidth + cellSize ||
+                    worldP.y > this.engine.canvasHeight + cellSize ||
+                    worldP.x < -cellSize ||
+                    worldP.y < -cellSize
+
             if (!visited.has(key)) {
                 this.possibleCellMap.push(vec);
                 visited.add(key);
             }
             for (const dir of this.directions) {
-                const worldP = this.gridToWorld(vec);
-                if (!( 
-                    worldP.x > this.engine.canvasWidth + cellSize ||
-                    worldP.y > this.engine.canvasHeight + cellSize ||
-                    worldP.x < -cellSize ||
-                    worldP.y < -cellSize
-                )) {
+                if (!(isOutOfBounds)) { 
                     const neighborPos = vec.add(dir);
                     const neighborKey = GameOfLife.generateKey(neighborPos);
                     if (!visited.has(neighborKey)) {
@@ -159,15 +166,15 @@ export class GameOfLife extends ex.Scene {
             const key = GameOfLife.generateKey(p);
             const neighbors = neighborCounts.get(GameOfLife.generateKey(p)) as number;
             const isCurrentlyActive = this.activeCellMap.has(key);
-
-            if (!isCurrentlyActive && neighbors === 3) {
-                const worldP = this.gridToWorld(p);
-                if (
-                    worldP.x > this.engine.canvasWidth + cellSize ||
+            const worldP = this.gridToWorld(p);
+            const isOutOfBounds = worldP.x > this.engine.canvasWidth + cellSize ||
                     worldP.y > this.engine.canvasHeight + cellSize ||
                     worldP.x < -cellSize ||
                     worldP.y < -cellSize
-                ) {
+
+            // Cell reproduce
+            if (!isCurrentlyActive && neighbors === 3) {
+                if ( isOutOfBounds ) {
                     if (!this.changedCells.has(p)) {
                         this.changedCells.add(p);
                     }
@@ -179,25 +186,26 @@ export class GameOfLife extends ex.Scene {
                     cell.updatePos(p);
 
                     nextGenerationMap.set(key, cell);
+                    this.add(cell);
                     if (!this.changedCells.has(p)) {
                         this.changedCells.add(p);
                     }
 
                 }
-            // Deletar todas as celulas com menos que 2 e mais que 3
-            } else if (isCurrentlyActive && (neighbors > 3 && neighbors < 2)) {
+            // Cell dies
+            } else if (isCurrentlyActive && (neighbors > 3 || neighbors < 2)) {
 
                 if (!this.changedCells.has(p)) {
                     this.changedCells.add(p);
                 }
 
                 const currentCell = this.activeCellMap.get(key);
-                if (currentCell != undefined) {
+                if (currentCell !== undefined) {
                     this.pool.return(currentCell);
                     this.activeCellMap.delete(key)
                     this.remove(currentCell);
                 }
-
+            //Cell survives
             } else if (isCurrentlyActive && (neighbors === 2 || neighbors === 3)) {
 
                 if (!this.changedCells.has(p)) {
@@ -207,17 +215,6 @@ export class GameOfLife extends ex.Scene {
                 const currentCell = this.activeCellMap.get(key);
                 if (currentCell != undefined) {
                     nextGenerationMap.set(key, currentCell);
-                }
-            } else {
-
-                const currentCell = this.activeCellMap.get(key);
-                if (!this.changedCells.has(p)) {
-                    this.changedCells.add(p);
-                }
-                if (currentCell != undefined) {
-                    this.pool.return(currentCell);
-                    this.remove(currentCell);
-                    this.activeCellMap.delete(key)
                 }
             }
         }

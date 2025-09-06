@@ -45,6 +45,7 @@ export class RentalPool<T> {
   return(object: T): void {
     if (object == undefined) {
         console.error("pushed undefined object");
+        return
     }
     this._pool.push(object);
   }
