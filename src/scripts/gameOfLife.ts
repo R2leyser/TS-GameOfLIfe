@@ -2,7 +2,7 @@ import * as ex from 'excalibur';
 import { Cell, cellSize } from './cell';
 import { RentalPool } from './lib/RentalPool';
 
-export const initialAmountOfCells = 1000
+export const initialAmountOfCells = 10000
 export const framesOfFade = 100
 
 
@@ -13,9 +13,11 @@ type DeadCell = {
 
 export class GameOfLife extends ex.Scene {
    possibleCellMap: ex.Vector[] = [];
+   mockPossibleCellMap: ex.Vector[] = [];
    activeCellMap: Map<string, Cell> = new Map<string, Cell>();
    changedCells: Set<ex.Vector> = new Set<ex.Vector>;
    deadCellMap: Map<string, DeadCell> = new Map<string, DeadCell>();
+   title: ex.Label = new ex.Label();
 
    directions: ex.Vector[] = [ 
             ex.vec(-1,-1 ),
@@ -31,7 +33,6 @@ export class GameOfLife extends ex.Scene {
     pool: RentalPool<Cell> = new RentalPool( () => { 
                                         let cell = new Cell()
                                         if (!cell) {
-                                            console.debug("Undefined cell")
                                         }
                                         return cell
                                     },
@@ -41,7 +42,7 @@ export class GameOfLife extends ex.Scene {
                                         return used
                                     }, 
 
-                                    1 );
+                                    initialAmountOfCells );
 
 
     private addActiveCell(vec: ex.Vector) {
@@ -53,7 +54,6 @@ export class GameOfLife extends ex.Scene {
         let cell = this.pool.rent();
 
         cell.updatePos(vec);
-        cell.actions.clearActions();
         
         if (!this.changedCells.has(vec)){
             this.changedCells.add(vec);
@@ -61,15 +61,11 @@ export class GameOfLife extends ex.Scene {
 
         this.activeCellMap.set(key, cell);
 
-        this.add(cell);
     }
 
 
 
-
-
     private restartSimulation() {
-
         this.activeCellMap.forEach(cell => {
             if (cell) {  
                 this.pool.return(cell);
@@ -79,6 +75,7 @@ export class GameOfLife extends ex.Scene {
 
         this.clear(false);
         this.possibleCellMap = [];
+        this.mockPossibleCellMap = [];
         this.activeCellMap = new Map<string, Cell>();
         this.deadCellMap = new Map<string, DeadCell>();
 
@@ -126,9 +123,11 @@ export class GameOfLife extends ex.Scene {
 
         // Gather all possible cells (current active and their neighbors)
         this.possibleCellMap.length = 0;
+        this.mockPossibleCellMap.length = 0
         const visited = new Set<string>();
 
-        this.changedCells.forEach((vec: ex.Vector) => {
+        this.activeCellMap.forEach((cell: Cell) => {
+            const vec = cell.vector;
             const key = GameOfLife.generateKey(vec);
 
             const worldP = this.gridToWorld(vec);
@@ -152,7 +151,6 @@ export class GameOfLife extends ex.Scene {
                 }
             }
         });
-
         this.changedCells.clear();
 
         const neighborCounts = new Map<string, number>();
@@ -177,18 +175,13 @@ export class GameOfLife extends ex.Scene {
             // Cell reproduce
             if (!isCurrentlyActive && neighbors === 3) {
                 if ( isOutOfBounds ) {
-                    if (!this.changedCells.has(p)) {
-                        this.changedCells.add(p);
-                    }
                 } else {
 
                     let cell = this.pool.rent();
-                    console.log(cell);
 
                     cell.updatePos(p);
 
                     nextGenerationMap.set(key, cell);
-                    this.add(cell);
                     if (!this.changedCells.has(p)) {
                         this.changedCells.add(p);
                     }
@@ -203,18 +196,11 @@ export class GameOfLife extends ex.Scene {
 
                 const currentCell = this.activeCellMap.get(key);
                 if (currentCell !== undefined) {
-
                     this.pool.return(currentCell);
                     this.activeCellMap.delete(key)
-                    this.remove(currentCell);
                 }
             //Cell survives
             } else if (isCurrentlyActive && (neighbors === 2 || neighbors === 3)) {
-
-                if (!this.changedCells.has(p)) {
-                    this.changedCells.add(p);
-                }
-
                 const currentCell = this.activeCellMap.get(key);
                 if (currentCell != undefined) {
                     nextGenerationMap.set(key, currentCell);
@@ -225,37 +211,37 @@ export class GameOfLife extends ex.Scene {
         this.activeCellMap = nextGenerationMap;
     }
 
-    // override onPostDraw(ctx: ex.ExcaliburGraphicsContext, elapsed: number): void {
-    //     super.onPostDraw(ctx, elapsed);
-    //     this.deadCellMap.forEach( (deadCell: DeadCell, key: string) => {
-    //         const recSize = cellSize * this.camera.zoom;
-    //         const alpha = deadCell.life/framesOfFade;
-    //         ctx.drawRectangle(
-    //             deadCell.pos.scale(this.camera.zoom)
-    //                 .sub(ex.vec(recSize/2, recSize/2)),
-    //             recSize,
-    //             recSize,
-    //             ex.Color.fromRGB(255, 0, 0, alpha)
-    //         );
-    //         if (deadCell.life <= -1) {
-    //             this.deadCellMap.delete(key);
-    //         }
-    //         deadCell.life--
-    //     })
-    // }
+    override onPreDraw(ctx: ex.ExcaliburGraphicsContext, elapsed: number): void {
+        super.onPreDraw(ctx, elapsed);
+
+        this.activeCellMap.forEach( (cell: Cell) => {
+            const recSize = cellSize * this.camera.zoom;
+            ctx.drawRectangle(
+                cell.pos.scale(this.camera.zoom)
+                    .sub(ex.vec(recSize/2, recSize/2)),
+                recSize,
+                recSize,
+                cell.color
+            );
+        })
+    }
+
 
     override onInitialize(): void {
+
         this.input.pointers.primary.on('down', (evt) => {
             const x1 = Math.floor(evt.worldPos.x / cellSize);
             const y1 = Math.floor(evt.worldPos.y / cellSize);
             let vec = ex.vec(x1, y1);
-            console.log("adding cell");
             
             for (let x = -20; x < 20; x ++) {
                 for (let y = -20; y  <  20; y ++) {
-                    var tempVec = vec.add(ex.vec(x, y));
-                    this.addActiveCell(tempVec);
-                    this.changedCells.add(tempVec);
+                    let rand = Math.random();
+                    if (rand > 0.7) { 
+                        var tempVec = vec.add(ex.vec(x, y));
+                        this.addActiveCell(tempVec);
+                        this.changedCells.add(tempVec);
+                    }
                 }
                 this.addActiveCell(vec);
                 this.changedCells.add(vec);
