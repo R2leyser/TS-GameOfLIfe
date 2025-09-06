@@ -1,19 +1,14 @@
 
 import * as ex from 'excalibur';
+import { GameOfLife } from './gameOfLife';
 
-export const cellSize = 30
+export const cellSize = 10
 export const halfCellSize = cellSize/2
 
 export class Cell extends ex.Actor {
     vector: ex.Vector
 
-    updatePos( vec: ex.Vector ): void {
-        this.vector = vec;
-        this.pos = ex.vec(vec.x * cellSize + halfCellSize, vec.y * cellSize + halfCellSize);
-    } 
-
     constructor(vector: ex.Vector) {
-        
         super({
             pos: ex.vec(vector.x * cellSize + halfCellSize, vector.y * cellSize + halfCellSize),
             width: cellSize,
@@ -23,4 +18,9 @@ export class Cell extends ex.Actor {
 
         this.vector = vector;
     }
+
+    updatePos( vec: ex.Vector ): void {
+        this.vector = vec;
+        this.pos = ex.vec(vec.x * cellSize + halfCellSize, vec.y * cellSize + halfCellSize);
+    } 
 }
