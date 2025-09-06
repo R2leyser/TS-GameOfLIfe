@@ -71,7 +71,9 @@ export class GameOfLife extends ex.Scene {
     private restartSimulation() {
 
         this.activeCellMap.forEach(cell => {
-            this.pool.return(cell);
+            if (cell) {  
+                this.pool.return(cell);
+            }
         });
 
 
@@ -201,6 +203,7 @@ export class GameOfLife extends ex.Scene {
 
                 const currentCell = this.activeCellMap.get(key);
                 if (currentCell !== undefined) {
+
                     this.pool.return(currentCell);
                     this.activeCellMap.delete(key)
                     this.remove(currentCell);
