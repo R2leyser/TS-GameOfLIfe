@@ -1,7 +1,7 @@
 
 import * as ex from 'excalibur';
 
-export const cellSize = 5
+export const cellSize = 20
 export const halfCellSize = cellSize/2
 
 export class Cell {

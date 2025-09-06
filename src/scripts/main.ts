@@ -8,7 +8,7 @@ const game = new ex.Engine({
     pixelArt: true,
     pixelRatio: 2,
     displayMode: ex.DisplayMode.FillScreen,
-    // maxFps: 10
+    maxFps: 15
 })
 
 let gameoflife = new GameOfLife();

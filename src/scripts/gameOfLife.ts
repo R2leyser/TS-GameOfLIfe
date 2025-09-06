@@ -5,7 +5,6 @@ import { RentalPool } from './lib/RentalPool';
 export const initialAmountOfCells = 10000
 export const framesOfFade = 100
 
-
 type DeadCell = {
     pos: ex.Vector;
     life: number;
@@ -123,8 +122,9 @@ export class GameOfLife extends ex.Scene {
 
         // Gather all possible cells (current active and their neighbors)
         this.possibleCellMap.length = 0;
-        this.mockPossibleCellMap.length = 0
         const visited = new Set<string>();
+
+        const neighborCounts = new Map<string, number>();
 
         this.activeCellMap.forEach((cell: Cell) => {
             const vec = cell.vector;
@@ -153,7 +153,6 @@ export class GameOfLife extends ex.Scene {
         });
         this.changedCells.clear();
 
-        const neighborCounts = new Map<string, number>();
 
         for (const vec of this.possibleCellMap) {
             const key = GameOfLife.generateKey(vec);
@@ -162,7 +161,9 @@ export class GameOfLife extends ex.Scene {
         }
 
         const nextGenerationMap = new Map<string, Cell>();
+
         for (const p of this.possibleCellMap) {
+
             const key = GameOfLife.generateKey(p);
             const neighbors = neighborCounts.get(GameOfLife.generateKey(p)) as number;
             const isCurrentlyActive = this.activeCellMap.has(key);
@@ -180,8 +181,8 @@ export class GameOfLife extends ex.Scene {
                     let cell = this.pool.rent();
 
                     cell.updatePos(p);
-
                     nextGenerationMap.set(key, cell);
+
                     if (!this.changedCells.has(p)) {
                         this.changedCells.add(p);
                     }
@@ -237,7 +238,27 @@ export class GameOfLife extends ex.Scene {
             for (let x = -20; x < 20; x ++) {
                 for (let y = -20; y  <  20; y ++) {
                     let rand = Math.random();
-                    if (rand > 0.7) { 
+                    if (rand > 0.9) { 
+                        var tempVec = vec.add(ex.vec(x, y));
+                        this.addActiveCell(tempVec);
+                        this.changedCells.add(tempVec);
+                    }
+                }
+                this.addActiveCell(vec);
+                this.changedCells.add(vec);
+            }
+        });
+
+        this.input.pointers.primary.on('move', (evt) => {
+            if (!this.input.pointers.isDown(0)){ return }
+            const x1 = Math.floor(evt.worldPos.x / cellSize);
+            const y1 = Math.floor(evt.worldPos.y / cellSize);
+            let vec = ex.vec(x1, y1);
+            
+            for (let x = -20; x < 20; x ++) {
+                for (let y = -20; y  <  20; y ++) {
+                    let rand = Math.random();
+                    if (rand > 0.9) { 
                         var tempVec = vec.add(ex.vec(x, y));
                         this.addActiveCell(tempVec);
                         this.changedCells.add(tempVec);
@@ -256,7 +277,6 @@ export class GameOfLife extends ex.Scene {
 
         this.camera.zoom = 0.5
         this.camera.pos = ex.vec( this.engine.halfCanvasWidth, this.engine.halfCanvasHeight )
-
 
         this.restartSimulation();
     }
